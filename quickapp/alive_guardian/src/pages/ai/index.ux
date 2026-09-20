@@ -1,0 +1,406 @@
+<template>
+    <div class="page">
+      <div class="screen">
+        <text class="title">AI 健康助手</text>
+        <text class="subtitle">根据近期健康数据生成今日建议</text>
+  
+        <div class="quote-card">
+          <text class="section-label">今日一句</text>
+          <text class="quote-text">{{quote}}</text>
+        </div>
+  
+        <div class="generate-button" onclick="generateAdvice">
+          <text class="generate-button-text">{{buttonText}}</text>
+        </div>
+  
+        <div class="advice-card">
+          <text class="section-label">AI 健康建议</text>
+          <text class="advice-text">{{advice}}</text>
+        </div>
+  
+        <text class="notice">建议仅供日常参考，不用于医学诊断</text>
+      </div>
+    </div>
+  </template>
+  
+  <style>
+  .page {
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    background-color: #F8F5E1;
+    overflow: hidden;
+  }
+  
+  .screen {
+    width: 390px;
+    height: 450px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: #F8F5E1;
+    overflow: hidden;
+  }
+  
+  .title {
+    margin-top: 28px;
+    font-size: 30px;
+    font-weight: bold;
+    color: #20201D;
+  }
+  
+  .subtitle {
+    margin-top: 5px;
+    font-size: 14px;
+    color: #77746B;
+  }
+  
+  .quote-card {
+    width: 330px;
+    height: 82px;
+    margin-top: 18px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 18px;
+    padding-right: 18px;
+    background-color: #F3EEDA;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  
+  .section-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #6E9365;
+  }
+  
+  .quote-text {
+    width: 294px;
+    margin-top: 8px;
+    font-size: 19px;
+    font-weight: bold;
+    color: #20201D;
+  }
+  
+  .generate-button {
+    width: 260px;
+    height: 48px;
+    margin-top: 18px;
+    justify-content: center;
+    align-items: center;
+    background-color: #20201D;
+    border-radius: 24px;
+  }
+  
+  .generate-button-text {
+    font-size: 17px;
+    color: #F8F5E1;
+  }
+  
+  .advice-card {
+    width: 330px;
+    height: 132px;
+    margin-top: 18px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 15px;
+    background-color: #FFFDF4;
+    border-width: 1px;
+    border-color: #E4DECA;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  
+  .advice-text {
+    width: 294px;
+    height: 88px;
+    margin-top: 9px;
+    font-size: 16px;
+    line-height: 22px;
+    color: #494842;
+    overflow: hidden;
+  }
+  
+  .notice {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #9A968B;
+  }
+  </style>
+  
+  <script>
+  import velaclaw from '@system.velaclaw'
+  import health from '@service.health'
+  
+  const storage = require('@system.storage')
+  
+  export default {
+    data: {
+      quote: "今天也要好好活着。",
+      advice: "点击按钮，让 AI 根据近期健康数据生成一条简短建议。",
+      buttonText: "生成今日健康建议",
+      loading: false
+    },
+  
+    onInit() {
+      console.log("AI HEALTH PAGE: init")
+  
+      storage.get({
+        key: "ai_health_result",
+        success: (data) => {
+          if (data && data.value) {
+            try {
+              let result = JSON.parse(data.value)
+              if (result.quote) {
+                this.quote = result.quote
+              }
+              if (result.advice) {
+                this.advice = result.advice
+              }
+            }
+            catch (e) {
+              console.log("AI HEALTH PAGE: saved result parse fail", e)
+            }
+          }
+        },
+        fail: (err) => {
+          console.log("AI HEALTH PAGE: no saved result", err)
+        }
+      })
+    },
+  
+    generateAdvice() {
+      if (this.loading) {
+        return
+      }
+  
+      this.loading = true
+      this.buttonText = "AI 分析中..."
+      this.advice = "正在读取近期健康数据，请稍候..."
+  
+      storage.get({
+        key: "alive_info",
+        success: (data) => {
+          let aliveInfo = null
+  
+          if (data && data.value) {
+            try {
+              aliveInfo = JSON.parse(data.value)
+            }
+            catch (e) {
+              console.log("AI HEALTH PAGE: alive_info parse fail", e)
+            }
+          }
+  
+          this.fetchHealthAndAsk(aliveInfo)
+        },
+        fail: () => {
+          this.fetchHealthAndAsk(null)
+        }
+      })
+    },
+  
+    fetchHealthAndAsk(aliveInfo) {
+      health.getRecentSamples({
+        dataTypes: [
+          health.DATA_TYPES.HEART_RATE,
+          health.DATA_TYPES.SPO2,
+          health.DATA_TYPES.STRESS
+        ],
+  
+        success: (list) => {
+          let heartRate = "暂无数据"
+          let spo2 = "暂无数据"
+          let stress = "暂无数据"
+  
+          if (list && list.length) {
+            for (let i = 0; i < list.length; i++) {
+              let item = list[i]
+  
+              if (!item || !item.data) {
+                continue
+              }
+  
+              if (item.dataType == health.DATA_TYPES.HEART_RATE) {
+                heartRate = item.data.value
+              }
+              else if (item.dataType == health.DATA_TYPES.SPO2) {
+                spo2 = item.data.value
+              }
+              else if (item.dataType == health.DATA_TYPES.STRESS) {
+                stress = item.data.value
+              }
+            }
+          }
+  
+          this.askHealthAdvisor(
+            heartRate,
+            spo2,
+            stress,
+            aliveInfo
+          )
+        },
+  
+        fail: (data, code) => {
+          console.log(
+            "AI HEALTH PAGE: getRecentSamples fail",
+            code,
+            data
+          )
+  
+          this.askHealthAdvisor(
+            "暂无数据",
+            "暂无数据",
+            "暂无数据",
+            aliveInfo
+          )
+        }
+      })
+    },
+  
+    askHealthAdvisor(heartRate, spo2, stress, aliveInfo) {
+      let checked = "未知"
+      let continuousDays = 0
+      let lastCheckIn = "暂无"
+  
+      if (aliveInfo) {
+        if (aliveInfo.todayChecked) {
+          checked = "已确认"
+        }
+        else {
+          checked = "未确认"
+        }
+  
+        if (aliveInfo.continuousDays) {
+          continuousDays = aliveInfo.continuousDays
+        }
+  
+        if (aliveInfo.lastCheckIn) {
+          lastCheckIn = aliveInfo.lastCheckIn
+        }
+      }
+  
+      let prompt =
+        "请使用 Health Advisor 健康建议规则，根据以下设备近期数据生成今日内容。"
+        + "\n心率：" + heartRate + " bpm"
+        + "\n血氧：" + spo2 + " %"
+        + "\n压力：" + stress
+        + "\n今日安全确认：" + checked
+        + "\n连续确认：" + continuousDays + " 天"
+        + "\n最近确认：" + lastCheckIn
+        + "\n"
+        + "\n必须严格只输出两行："
+        + "\nQUOTE:一句轻松、温暖或略带幽默的今日一句，不超过18个汉字。"
+        + "\nADVICE:根据数据给出日常健康建议，最多3句话，总长度不超过80个中文字符。"
+        + "\n不要重复罗列原始数值，不做疾病诊断，不推荐药物。"
+        + "\n如果数据不足，就明确说数据有限，并给一般性的休息、活动、补水或放松建议。"
+  
+      console.log("AI HEALTH PAGE: ask advisor")
+  
+      velaclaw.ask({
+        query: prompt,
+  
+        success: (res) => {
+          console.log(
+            "AI HEALTH PAGE: AI success",
+            JSON.stringify(res)
+          )
+  
+          if (res && res.reply) {
+            this.applyAIResult(res.reply)
+          }
+          else {
+            this.advice = "AI 暂时没有返回建议，请稍后再试。"
+          }
+        },
+  
+        fail: (data, code) => {
+          console.log(
+            "AI HEALTH PAGE: AI fail",
+            code,
+            data
+          )
+  
+          this.advice =
+            "AI 暂时不可用。今天也要记得适当活动、补水和休息。"
+  
+          this.quote =
+            "先照顾好自己。"
+        },
+  
+        complete: () => {
+          this.loading = false
+          this.buttonText = "重新生成健康建议"
+          console.log("AI HEALTH PAGE: complete")
+        }
+      })
+    },
+  
+    applyAIResult(reply) {
+      let quote = ""
+      let advice = ""
+      let lines = reply.split("\n")
+  
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i]
+  
+        if (line.indexOf("QUOTE:") == 0) {
+          quote = line.substring(6).trim()
+        }
+        else if (line.indexOf("ADVICE:") == 0) {
+          advice = line.substring(7).trim()
+        }
+      }
+  
+      if (!quote) {
+        quote = "今天也要好好活着。"
+      }
+  
+      if (!advice) {
+        advice = reply
+      }
+  
+      quote = this.limitText(quote, 22)
+      advice = this.limitText(advice, 90)
+  
+      this.quote = quote
+      this.advice = advice
+  
+      let saveData = {
+        quote: quote,
+        advice: advice
+      }
+  
+      storage.set({
+        key: "ai_health_result",
+        value: JSON.stringify(saveData),
+  
+        success: () => {
+          console.log("AI HEALTH PAGE: result saved")
+        },
+  
+        fail: (err) => {
+          console.log("AI HEALTH PAGE: save fail", err)
+        }
+      })
+    },
+  
+    limitText(text, maxLength) {
+      if (!text) {
+        return ""
+      }
+  
+      if (text.length <= maxLength) {
+        return text
+      }
+  
+      return text.substring(0, maxLength - 1) + "…"
+    }
+  }
+  </script>

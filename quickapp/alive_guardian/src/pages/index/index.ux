@@ -1,0 +1,1059 @@
+<template>
+
+  <div class="page">
+
+    <div class="screen">
+
+
+      <text class="heart">
+        ♥
+      </text>
+
+
+      <text class="title">
+        are you ok?
+      </text>
+
+
+      <text class="status">
+        {{status}}
+      </text>
+
+
+      <text class="info">
+        {{lastTime}}
+      </text>
+
+
+      <text class="info">
+        连续确认 {{continuousDays}} 天
+      </text>
+
+
+
+      <div
+        class="main-button"
+        onclick="checkIn"
+      >
+
+        <text class="main-button-text">
+          我还活着
+        </text>
+
+      </div>
+
+
+
+      <div class="health-row">
+
+
+        <div
+          class="health-card"
+          onclick="openHealthDetail"
+        >
+
+          <text class="health-label">
+            当前心率
+          </text>
+
+          <text class="health-value">
+            {{heartRateText}}
+          </text>
+
+        </div>
+
+
+
+        <div
+          class="health-card"
+          onclick="openHealthDetail"
+        >
+
+          <text class="health-label">
+            当前压力
+          </text>
+
+          <text class="health-value">
+            {{stressText}}
+          </text>
+
+        </div>
+
+
+      </div>
+
+
+
+      <div class="health-row">
+
+
+        <div
+          class="health-card"
+          onclick="openHealthDetail"
+        >
+
+          <text class="health-label">
+            当前血氧
+          </text>
+
+          <text class="health-value">
+            {{spo2Text}}
+          </text>
+
+        </div>
+
+
+
+        <div
+          class="health-card"
+          onclick="tapAI"
+        >
+
+          <text class="health-label">
+            AI状态
+          </text>
+
+          <text class="health-value">
+            {{aiState}}
+          </text>
+
+        </div>
+
+
+      </div>
+
+
+
+      <text class="bottom-tip">
+        {{bottomTip}}
+      </text>
+
+
+    </div>
+
+  </div>
+
+</template>
+
+
+
+<style>
+
+
+.page {
+
+  width: 100%;
+  height: 100%;
+
+  flex-direction: column;
+
+  justify-content: flex-start;
+  align-items: flex-start;
+
+  background-color: #F8F5E1;
+
+  overflow: hidden;
+
+}
+
+
+
+.screen {
+
+  width: 390px;
+  height: 450px;
+
+  flex-direction: column;
+
+  justify-content: flex-start;
+  align-items: center;
+
+  background-color: #F8F5E1;
+
+  overflow: hidden;
+
+}
+
+
+
+.heart {
+
+  margin-top: 12px;
+
+  font-size: 34px;
+
+  color: #171714;
+
+}
+
+
+
+.title {
+
+  margin-top: 2px;
+
+  font-size: 38px;
+
+  font-weight: bold;
+
+  color: #171714;
+
+}
+
+
+
+.status {
+
+  margin-top: 7px;
+
+  font-size: 21px;
+
+  color: #8EAA82;
+
+}
+
+
+
+.info {
+
+  margin-top: 1px;
+
+  font-size: 14px;
+
+  color: #89867D;
+
+}
+
+
+
+.main-button {
+
+  width: 280px;
+  height: 50px;
+
+  margin-top: 13px;
+
+  justify-content: center;
+  align-items: center;
+
+  background-color: #1A1A17;
+
+  border-radius: 25px;
+
+}
+
+
+
+.main-button-text {
+
+  font-size: 22px;
+
+  color: #F8F5E1;
+
+}
+
+
+
+.health-row {
+
+  width: 280px;
+  height: 52px;
+
+  margin-top: 8px;
+
+  flex-direction: row;
+
+  justify-content: space-between;
+  align-items: center;
+
+}
+
+
+
+.health-card {
+
+  width: 134px;
+  height: 52px;
+
+  flex-direction: column;
+
+  justify-content: center;
+  align-items: center;
+
+  background-color: #F1ECD8;
+
+  border-width: 1px;
+
+  border-color: #8E8A80;
+
+  border-radius: 24px;
+
+}
+
+
+
+.health-label {
+
+  font-size: 13px;
+
+  color: #77746C;
+
+}
+
+
+
+.health-value {
+
+  margin-top: 2px;
+
+  font-size: 17px;
+
+  font-weight: bold;
+
+  color: #20201D;
+
+}
+
+
+
+.bottom-tip {
+
+  width: 300px;
+
+  margin-top: 7px;
+
+  font-size: 12px;
+
+  text-align: center;
+
+  color: #969187;
+
+}
+
+
+</style>
+
+
+
+<script>
+
+
+import router from '@system.router'
+
+import velaclaw from '@system.velaclaw'
+
+
+import {
+
+  getRecent,
+
+  subscribe,
+
+  unsubscribe,
+
+  DATA_TYPES
+
+} from '../../common/health.js'
+
+
+const storage =
+  require('@system.storage')
+
+
+
+const HEALTH_TYPES = [
+
+  DATA_TYPES.HEART_RATE,
+
+  DATA_TYPES.SPO2,
+
+  DATA_TYPES.STRESS
+
+]
+
+
+
+export default {
+
+
+  data: {
+
+
+    status:
+      "今日状态：等待确认",
+
+
+    lastTime:
+      "还没有打卡",
+
+
+    lastCheckInRaw:
+      "",
+
+
+    continuousDays:
+      0,
+
+
+    heartRateText:
+      "-- bpm",
+
+
+    spo2Text:
+      "-- %",
+
+
+    stressText:
+      "--",
+
+
+    aiState:
+      "ready",
+
+
+    bottomTip:
+      "点击健康数据查看趋势",
+
+
+    healthActive:
+      false
+
+  },
+
+
+
+  onInit() {
+
+
+    console.log(
+      "Alive Guardian start"
+    )
+
+
+    this.loadCheckInInfo()
+
+
+    /*
+     * 保留此前已经跑通的
+     * VelaClaw 主动消息订阅
+     */
+
+    velaclaw.subscribe({
+
+      callback: (res) => {
+
+        console.log(
+          "VELACLAW PROACTIVE:",
+          JSON.stringify(res)
+        )
+
+
+        if (
+          res &&
+          res.reply
+        ) {
+
+          this.aiState =
+            "new"
+
+        }
+
+      }
+
+    })
+
+  },
+
+
+
+  onReady() {
+
+    this.startHealth()
+
+  },
+
+
+
+  onShow() {
+
+    this.startHealth()
+
+  },
+
+
+
+  /*
+   * 进入详情页时停止主页健康订阅，
+   * 防止两个页面同时重复订阅。
+   */
+  onHide() {
+
+    this.stopHealth()
+
+  },
+
+
+
+  onDestroy() {
+
+    this.stopHealth()
+
+
+    velaclaw.unsubscribe()
+
+  },
+
+
+
+  /*
+   * 开启主页健康数据
+   */
+  startHealth() {
+
+
+    if (
+      this.healthActive
+    ) {
+
+      return
+
+    }
+
+
+    this.healthActive =
+      true
+
+
+    this.loadRecentHealth()
+
+
+    subscribe(
+
+      DATA_TYPES.HEART_RATE,
+
+      (sample) => {
+
+        this.applyHealthSample(
+          sample
+        )
+
+      },
+
+      (err) => {
+
+        console.log(
+          "heart error:",
+          JSON.stringify(err)
+        )
+
+      }
+
+    )
+
+
+
+    subscribe(
+
+      DATA_TYPES.SPO2,
+
+      (sample) => {
+
+        this.applyHealthSample(
+          sample
+        )
+
+      },
+
+      (err) => {
+
+        console.log(
+          "spo2 error:",
+          JSON.stringify(err)
+        )
+
+      }
+
+    )
+
+
+
+    subscribe(
+
+      DATA_TYPES.STRESS,
+
+      (sample) => {
+
+        this.applyHealthSample(
+          sample
+        )
+
+      },
+
+      (err) => {
+
+        console.log(
+          "stress error:",
+          JSON.stringify(err)
+        )
+
+      }
+
+    )
+
+  },
+
+
+
+  /*
+   * 停止主页健康订阅
+   */
+  stopHealth() {
+
+
+    if (
+      !this.healthActive
+    ) {
+
+      return
+
+    }
+
+
+    for (
+      let i = 0;
+      i < HEALTH_TYPES.length;
+      i++
+    ) {
+
+      unsubscribe(
+        HEALTH_TYPES[i]
+      )
+
+    }
+
+
+    this.healthActive =
+      false
+
+  },
+
+
+
+  /*
+   * 页面打开时先补一帧最近值
+   */
+  loadRecentHealth() {
+
+
+    getRecent(
+      HEALTH_TYPES
+    )
+    .then((list) => {
+
+
+      for (
+        let i = 0;
+        i < list.length;
+        i++
+      ) {
+
+        this.applyHealthSample(
+          list[i]
+        )
+
+      }
+
+    })
+
+  },
+
+
+
+  /*
+   * 更新主页显示
+   */
+  applyHealthSample(sample) {
+
+
+    if (
+      !sample ||
+      !sample.ok
+    ) {
+
+      return
+
+    }
+
+
+
+    if (
+      sample.dataType ===
+      DATA_TYPES.HEART_RATE
+    ) {
+
+      this.heartRateText =
+        Math.round(
+          sample.value
+        )
+        + " bpm"
+
+    }
+
+
+
+    else if (
+      sample.dataType ===
+      DATA_TYPES.SPO2
+    ) {
+
+      this.spo2Text =
+        Math.round(
+          sample.value
+        )
+        + " %"
+
+    }
+
+
+
+    else if (
+      sample.dataType ===
+      DATA_TYPES.STRESS
+    ) {
+
+      this.stressText =
+        ""
+        + Math.round(
+          sample.value
+        )
+
+    }
+
+  },
+
+
+
+  /*
+   * 进入健康详情页
+   */
+  openHealthDetail() {
+
+
+    console.log(
+      "Open health detail"
+    )
+
+
+    router.push({
+
+      uri:
+        "/pages/detail"
+
+    })
+
+  },
+
+
+
+  /*
+   * 进入 AI 健康助手页
+   */
+  tapAI() {
+
+    console.log(
+      "Open AI health page"
+    )
+
+
+    router.push({
+
+      uri:
+        "/pages/ai"
+
+    })
+
+  },
+
+
+
+  /*
+   * 加载打卡记录
+   */
+  loadCheckInInfo() {
+
+
+    storage.get({
+
+      key:
+        "alive_info",
+
+
+      success: (data) => {
+
+
+        if (
+          !data ||
+          !data.value
+        ) {
+
+          return
+
+        }
+
+
+        let info =
+          JSON.parse(
+            data.value
+          )
+
+
+        this.lastCheckInRaw =
+          info.lastCheckIn
+
+
+        this.continuousDays =
+          info.continuousDays || 0
+
+
+        this.lastTime =
+          "上次确认 "
+          + info.lastCheckIn
+
+
+        let today =
+          this.getDateString(
+            new Date()
+          )
+
+
+        let lastDay =
+          info.lastCheckIn
+            .split(" ")[0]
+
+
+        if (
+          today ===
+          lastDay
+        ) {
+
+          this.status =
+            "今日状态：已确认"
+
+        }
+
+        else {
+
+          this.status =
+            "今日状态：等待确认"
+
+        }
+
+      }
+
+    })
+
+  },
+
+
+
+  /*
+   * 每日确认
+   */
+  checkIn() {
+
+
+    let now =
+      new Date()
+
+
+    let time =
+      this.formatTime(now)
+
+
+    let today =
+      this.getDateString(now)
+
+
+
+    let yesterdayDate =
+      new Date()
+
+
+    yesterdayDate.setDate(
+
+      yesterdayDate.getDate()
+      - 1
+
+    )
+
+
+    let yesterday =
+      this.getDateString(
+        yesterdayDate
+      )
+
+
+    let count =
+      1
+
+
+
+    if (
+      this.lastCheckInRaw
+    ) {
+
+
+      let oldDay =
+        this.lastCheckInRaw
+          .split(" ")[0]
+
+
+
+      if (
+        oldDay ===
+        today
+      ) {
+
+        count =
+          this.continuousDays
+
+      }
+
+
+
+      else if (
+        oldDay ===
+        yesterday
+      ) {
+
+        count =
+          this.continuousDays
+          + 1
+
+      }
+
+
+
+      else {
+
+        count =
+          1
+
+      }
+
+    }
+
+
+
+    this.lastCheckInRaw =
+      time
+
+
+    this.continuousDays =
+      count
+
+
+    this.status =
+      "今日状态：已确认"
+
+
+    this.lastTime =
+      "确认时间 "
+      + time
+
+
+
+    let saveData = {
+
+      lastCheckIn:
+        time,
+
+      continuousDays:
+        count,
+
+      todayChecked:
+        true
+
+    }
+
+
+
+    storage.set({
+
+      key:
+        "alive_info",
+
+      value:
+        JSON.stringify(
+          saveData
+        )
+
+    })
+
+  },
+
+
+
+  formatTime(date) {
+
+
+    return (
+
+      date.getFullYear()
+
+      + "-"
+
+      + (
+        date.getMonth()
+        + 1
+      )
+
+      + "-"
+
+      + date.getDate()
+
+      + " "
+
+      + date.getHours()
+
+      + ":"
+
+      + date.getMinutes()
+
+      + ":"
+
+      + date.getSeconds()
+
+    )
+
+  },
+
+
+
+  getDateString(date) {
+
+
+    return (
+
+      date.getFullYear()
+
+      + "-"
+
+      + (
+        date.getMonth()
+        + 1
+      )
+
+      + "-"
+
+      + date.getDate()
+
+    )
+
+  }
+
+
+}
+
+
+</script>

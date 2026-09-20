@@ -1,0 +1,57 @@
+<template>
+
+  <div
+    class="container"
+    onclick="enterApp"
+  >
+
+    <image
+      class="splash-image"
+      src="/common/images/areyouok_390x450.jpg"
+    />
+
+  </div>
+
+</template>
+
+
+<style>
+
+.container {
+  width: 390px;
+  height: 450px;
+
+  background-color: #F8F5E1;
+}
+
+
+.splash-image {
+  width: 390px;
+  height: 450px;
+}
+
+</style>
+
+
+<script>
+
+import router from '@system.router'
+
+
+export default {
+
+  enterApp() {
+
+    console.log(
+      "Splash: enter main page"
+    )
+
+    router.replace({
+      uri: "/pages/index"
+    })
+
+  }
+
+}
+
+</script>
