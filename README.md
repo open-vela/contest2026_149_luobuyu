@@ -170,3 +170,10 @@ LLM：MiMo OpenAI-compatible API
 十、说明
 
 本项目重点验证 openvela 在可穿戴 AI 硬件上的应用能力，包括 QuickApp、健康服务、AI Agent、Skill、自定义 Tool 和主动安全守护机制。
+
+## openvela 公共仓修改
+
+本项目涉及的 openvela 公共组件修改已通过独立 Pull Request 提交：
+
+- AI Agent / Alive Guardian 安全守护流程：[open-vela/packages_ai_agent#46](https://github.com/open-vela/packages_ai_agent/pull/46)
+- VelaClaw QuickApp 与 AI Agent 桥接：[open-vela/frameworks_runtimes_feature#5](https://github.com/open-vela/frameworks_runtimes_feature/pull/5)
